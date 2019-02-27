@@ -1,6 +1,6 @@
 using System;
 
-namespace alg.core
+namespace DoubleSplit.Core
 {
     public class PlaneValidator : IValidator<Plane>
     {

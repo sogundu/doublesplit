@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace alg.core
+namespace DoubleSplit.Core
 {
     public interface IRandomCosinePlaneRenderer
     {

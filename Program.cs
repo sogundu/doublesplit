@@ -3,40 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using alg.core;
+using DoubleSplit.Core;
+using RangeTree;
 
-namespace alg
+namespace DoubleSplit
 {
     internal static class Program
     {
         private static void Main(string[] args)
         {
-            var planeValidator = new PlaneValidator();
-            var planeSize = new PlaneSize(1500, 500);
-            var plane = new Plane(planeValidator, planeSize, 4);
-
-            var renderer = new RandomCosinePlaneRenderer(plane);
-
-            var probabilityForPlane = renderer.GetProbabilityForPlane();
-            var sum = probabilityForPlane.Values.Sum();
-            var max = probabilityForPlane.Max(e => e.Value);
-            var min = probabilityForPlane.Min(e => e.Value);
-
-            Console.WriteLine($"Sum of the probability of all points is {sum}");
-            Console.WriteLine($"The maximum probability is {max}");
-            Console.WriteLine($"The minimum probability is {min}");
-
-            var scaledProbabilities = new Dictionary<double, Point>();
-
-            double index = 0;
-            foreach (var (point, probability) in probabilityForPlane)
-            {
-                if(Math.Abs(probability) <= 0)
-                    continue;
-                
-                index = index + probability;
-                scaledProbabilities.Add(index, point);
-            }
+            var tree = CreateTree();
 
             var random = new Random();
             var hitList = new Point[10000];
@@ -46,12 +22,40 @@ namespace alg
             for (var i = 0; i < 10000; i++)
             {
                 var nextRandomValue = random.NextDouble();
-                var nextRandomPoint = scaledProbabilities.First(e => e.Key >= nextRandomValue).Value;
+                var nextRandomPoint = tree.Query(nextRandomValue).Single().Point;
                 hitList[i] = nextRandomPoint;
             }
 
             Console.WriteLine("Created hit list...");
 
+            CreateCSV(hitList);
+        }
+
+        private static RangeTree<double, ProbabilityRangeItem> CreateTree()
+        {
+            var tree = new RangeTree<double, ProbabilityRangeItem>(new ProbabilityRangeItemComparer());
+
+            var planeValidator = new PlaneValidator();
+            var planeSize = new PlaneSize(1500, 500);
+            var plane = new Plane(planeValidator, planeSize, 8);
+            var renderer = new RandomCosinePlaneRenderer(plane);
+            var probabilityForPlane = renderer.GetProbabilityForPlane();
+
+            double index = 0;
+            foreach (var (point, probability) in probabilityForPlane)
+            {
+                if (Math.Abs(probability) <= 0)
+                    continue;
+
+                tree.Add(new ProbabilityRangeItem(new Range<double>(index, index + probability), point));
+                index += probability;
+            }
+
+            return tree;
+        }
+
+        private static void CreateCSV(Point[] hitList)
+        {
             var csv = new StringBuilder();
             csv.AppendLine("X,Y");
 
@@ -60,7 +64,7 @@ namespace alg
                 Console.WriteLine($"Adding hit point ({hitPoint.X}, {hitPoint.Y})...");
                 csv.AppendLine($"{hitPoint.X}, {hitPoint.Y}");
             }
-            
+
             Console.WriteLine("Writing hit list...");
 
             File.WriteAllText("./hitlist2.csv", csv.ToString());

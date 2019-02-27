@@ -1,4 +1,4 @@
-namespace alg.core
+namespace DoubleSplit.Core
 {
     public class Point
     {
